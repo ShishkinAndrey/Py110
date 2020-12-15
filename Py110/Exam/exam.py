@@ -19,26 +19,23 @@ def create_parser():
     parser.add_argument('--sale', type=int, required=False, help='Скидка')
     parser.add_argument('--output', required=False, help='Формат вывода(.json / .csv')
     subparsers = parser.add_subparsers(dest='json_csv')
+    subparsers_json(subparsers)
+    subparsers_csv(subparsers)
+    return parser
+
+
+def subparsers_json(subparsers):
     save_json = subparsers.add_parser('json', help='Введите json для записи в .json файл')
     save_json.add_argument('-jsfn', required=False, type=argparse.FileType('w'), help='Имя .json файла')
     save_json.add_argument('--indent', required=False, type=int, default=0, help='Размер отступов')
+    return save_json
+
+
+def subparsers_csv(subparsers):
     save_csv = subparsers.add_parser('csv', help='Введите csv для записи в .json файл')
     save_csv.add_argument('--csvname', required=False, type=argparse.FileType('w'), help='Имя .csv файла')
-    return parser
-#
-#
-# def subparsers_json(subparsers):
-#     save_json = subparsers.add_parser('json', help='Введите json для записи в .json файл')
-#     save_json.add_argument('-jsfn', required=False, type=argparse.FileType('w'), help='Имя .json файла')
-#     save_json.add_argument('--indent', required=False, type=int, default=0, help='Размер отступов')
-#     return save_json
-#
-#
-# def subparsers_csv(subparsers):
-#     save_csv = subparsers.add_parser('csv', help='Введите csv для записи в .json файл')
-#     save_csv.add_argument('--csvname', required=False, type=argparse.FileType('w'), help='Имя .csv файла')
-#
-#     return save_csv
+    return save_csv
+
 
 def get_authors():
     '''
@@ -58,6 +55,14 @@ def get_authors():
     return author_list
 
 
+def decorator_func(fn):
+    def wrapper():
+        res_func = fn()
+        return next(res_func)['model']
+    return wrapper
+
+
+@decorator_func
 def gen_book():
     dict_book = {}
     pk_value = 1
@@ -88,26 +93,6 @@ def gen_book():
         pk_value += 1
         title_number += 1
 
-def csv_writer(path, fieldnames, data):
-    """
-    Функция для записи в файл csv
-    path - путь до файла
-    fieldnames - название столбцов
-    data - список из списков
-    """
-    with open(path, "a", newline='') as out_file:
-        '''
-        out_file - выходные данные в виде объекта
-        delimiter - разделитель :|;
-        fieldnames - название полей (столбцов)
-        '''
-        writer = csv.DictWriter(out_file, delimiter=';', fieldnames=fieldnames)
-        # writer = csv.writer(out_file, delimiter=';', fieldnames=fieldnames)
-        writer.writeheader()
-        for row in data:
-            writer.writerow(row)
-
-
 if __name__ == '__main__':
     result = gen_book()
     parser = create_parser()
@@ -115,7 +100,7 @@ if __name__ == '__main__':
     if args.json_csv == 'json':
         for _ in range(args.count):
             json.dump(next(result), args.jsfn, indent=args.indent)
-    if args.json_csv == 'csv':
+    elif args.json_csv == 'csv':
         my_list = []
         list_fieldnames = []
         i = 0
@@ -126,14 +111,12 @@ if __name__ == '__main__':
             list_fieldnames.append(fields_keys)
         # работающий вариант!!!
         while i != args.count:
-            # updated_dict = next(result)
             updated_dict.update(updated_dict.pop('fields'))
-            print(updated_dict)
             my_list.append(updated_dict)
             csv_writer(args.csvname.name, list_fieldnames, my_list)
             my_list.clear()
             i += 1
             updated_dict = next(result)
-    elif not args.json_csv:
+    else:
         for _ in range(args.count):
             print(next(result))
